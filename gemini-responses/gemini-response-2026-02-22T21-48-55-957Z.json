@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-02-22T21:48:55.958Z",
+  "raw_response": "```json\n{\n  \"analysis_user_a\": \"User A's argument consists solely of the word \\\"test\\\". While this demonstrates participation, it entirely lacks any specific claim, evidence, reasoning, or context necessary to form a discernible position in a dispute. Its strength is merely its existence as a submission; its overwhelming weakness is the complete absence of substantive content.\",\n  \"analysis_user_b\": \"User B's argument consists solely of the word \\\"test\\\". While this demonstrates participation, it entirely lacks any specific claim, evidence, reasoning, or context necessary to form a discernible position in a dispute. Its strength is merely its existence as a submission; its overwhelming weakness is the complete absence of substantive content.\",\n  \"winner\": \"Tie\"\n}\n```",
+  "parsed_verdict": {
+    "analysis_user_a": "User A's argument consists solely of the word \"test\". While this demonstrates participation, it entirely lacks any specific claim, evidence, reasoning, or context necessary to form a discernible position in a dispute. Its strength is merely its existence as a submission; its overwhelming weakness is the complete absence of substantive content.",
+    "analysis_user_b": "User B's argument consists solely of the word \"test\". While this demonstrates participation, it entirely lacks any specific claim, evidence, reasoning, or context necessary to form a discernible position in a dispute. Its strength is merely its existence as a submission; its overwhelming weakness is the complete absence of substantive content.",
+    "winner": "Tie"
+  },
+  "user_a_evidence": "test",
+  "user_b_evidence": "test"
+}
