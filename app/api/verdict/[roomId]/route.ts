@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockRooms, mockSubmissions, mockDocuments } from '@/lib/mock-supabase';
+import { mockRooms, mockSubmissions, mockDocuments, mockQuestions } from '@/lib/mock-supabase';
 
 const USE_MOCK_DB = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
 
@@ -30,6 +30,11 @@ export async function GET(
       const userADocs = userASubmission ? allDocs.filter(d => d.submission_id === userASubmission.id) : [];
       const userBDocs = userBSubmission ? allDocs.filter(d => d.submission_id === userBSubmission.id) : [];
 
+      // Get answered questions for this room
+      const questions = Array.from(mockQuestions.values())
+        .filter(q => q.room_id === roomId && q.answered)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
       return NextResponse.json({
         room,
         submissions: {
@@ -42,6 +47,7 @@ export async function GET(
             documents: userBDocs
           } : null
         },
+        questions,
       });
     }
 

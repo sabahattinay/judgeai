@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
         verdict_json: null,
         engagement_score: 0,
         title: title || null,
+        questioning_round: 0,
+        max_questioning_rounds: 2,
       };
 
       mockRooms.set(roomId, room);

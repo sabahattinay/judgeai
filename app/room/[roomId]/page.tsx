@@ -7,6 +7,7 @@ import { DisputeRoom, Submission, Document } from '@/types/verdict';
 import { SubmissionForm } from '@/components/SubmissionForm';
 import { LiveSubmissionView } from '@/components/LiveSubmissionView';
 import { Verdict } from '@/components/Verdict';
+import { QuestionPanel } from '@/components/QuestionPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -32,6 +33,7 @@ export default function RoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [judging, setJudging] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
 
   useEffect(() => {
     if (!roomId) {
@@ -216,33 +218,57 @@ export default function RoomPage() {
         </div>
 
         {bothSubmitted && room.status !== 'judging' && (
-          <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
-            <CardContent className="py-8 text-center">
-              <Gavel className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-              <h3 className="text-2xl font-bold mb-2">Ready for Judgment</h3>
-              <p className="text-gray-600 mb-6">
-                Both parties have submitted their arguments. Click below to request AI judgment.
-              </p>
-              <Button
-                size="lg"
-                onClick={requestJudgment}
-                disabled={judging}
-                className="gap-2"
-              >
-                {judging ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Requesting Judgment...
-                  </>
-                ) : (
-                  <>
+          <>
+            {/* Question Panel */}
+            <QuestionPanel
+              roomId={roomId}
+              token={token!}
+              userType={userType}
+              onAllQuestionsAnswered={() => {
+                // Questions answered, ready for judgment
+                loadRoomData();
+              }}
+            />
+
+            {/* Judgment Request */}
+            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
+              <CardContent className="py-8 text-center">
+                <Gavel className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+                <h3 className="text-2xl font-bold mb-2">Ready for Judgment</h3>
+                <p className="text-gray-600 mb-6">
+                  Both parties have submitted their arguments. Click below to request AI judgment.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowQuestions(!showQuestions)}
+                    className="gap-2"
+                  >
                     <Gavel className="w-5 h-5" />
-                    Request AI Judgment
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+                    {showQuestions ? 'Hide' : 'Show'} Questions
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={requestJudgment}
+                    disabled={judging}
+                    className="gap-2"
+                  >
+                    {judging ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Requesting Judgment...
+                      </>
+                    ) : (
+                      <>
+                        <Gavel className="w-5 h-5" />
+                        Request AI Judgment
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         )}
       </div>
     </div>

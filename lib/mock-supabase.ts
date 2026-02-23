@@ -3,7 +3,7 @@
 interface MockRoom {
   id: string;
   created_at: string;
-  status: 'waiting' | 'ready' | 'judging' | 'completed';
+  status: 'waiting' | 'ready' | 'questioning' | 'answering' | 'judging' | 'completed';
   user_a_token: string;
   user_b_token: string;
   user_a_submitted: boolean;
@@ -11,6 +11,8 @@ interface MockRoom {
   verdict_json: any;
   engagement_score: number;
   title: string | null;
+  questioning_round: number;
+  max_questioning_rounds: number;
 }
 
 interface MockSubmission {
@@ -37,6 +39,7 @@ declare global {
   var mockDocuments: Map<string, MockDocument> | undefined;
   var mockEngagement: Map<string, Set<string>> | undefined;
   var mockFiles: Map<string, Buffer> | undefined;
+  var mockQuestions: Map<string, any> | undefined;
 }
 
 // In-memory storage for demo - use global to persist
@@ -45,6 +48,7 @@ export const mockSubmissions = global.mockSubmissions || new Map<string, MockSub
 export const mockDocuments = global.mockDocuments || new Map<string, MockDocument>();
 export const mockEngagement = global.mockEngagement || new Map<string, Set<string>>();
 export const mockFiles = global.mockFiles || new Map<string, Buffer>();
+export const mockQuestions = global.mockQuestions || new Map<string, any>();
 
 // Assign to global
 global.mockRooms = mockRooms;
@@ -52,6 +56,7 @@ global.mockSubmissions = mockSubmissions;
 global.mockDocuments = mockDocuments;
 global.mockEngagement = mockEngagement;
 global.mockFiles = mockFiles;
+global.mockQuestions = mockQuestions;
 
 // Helper functions
 export function generateId(): string {
@@ -77,6 +82,8 @@ const demoRoom: MockRoom = {
     analysis_user_b: "User B provided detailed counterpoints with supporting documentation. Their argument was well-structured and addressed key concerns. Strengths: Comprehensive coverage, strong rebuttal points, good use of evidence. Weaknesses: Some claims lacked specific quantitative data.",
     winner: "User A"
   },
+  questioning_round: 0,
+  max_questioning_rounds: 2,
   engagement_score: 42,
   title: "Who should pay for the broken window?"
 };

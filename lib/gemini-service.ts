@@ -24,12 +24,47 @@ function normalizeGeminiModel(model: string | undefined) {
 
 export const AI_MODEL = normalizeGeminiModel(process.env.AI_MODEL);
 
-export async function generateGeminiVerdict(userAEvidence: string, userBEvidence: string) {
+export async function generateGeminiVerdict(
+  userAEvidence: string, 
+  userBEvidence: string,
+  qaContext?: { question: string; answer: string; user: 'user_a' | 'user_b' }[]
+) {
   async function callModelOnce(modelName: string) {
     const model = genAI.getGenerativeModel({ model: modelName });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
+  }
+
+  // Input validation and truncation to prevent 400 errors
+  const maxEvidenceLength = 8000; // Leave room for prompt template
+  const maxQALength = 2000;
+  
+  if (userAEvidence.length > maxEvidenceLength) {
+    console.warn(`User A evidence truncated from ${userAEvidence.length} to ${maxEvidenceLength} chars`);
+    userAEvidence = userAEvidence.substring(0, maxEvidenceLength) + '... [truncated]';
+  }
+  
+  if (userBEvidence.length > maxEvidenceLength) {
+    console.warn(`User B evidence truncated from ${userBEvidence.length} to ${maxEvidenceLength} chars`);
+    userBEvidence = userBEvidence.substring(0, maxEvidenceLength) + '... [truncated]';
+  }
+
+  // Build Q&A context string with length limits
+  let qaContextText = '';
+  if (qaContext && qaContext.length > 0) {
+    qaContextText = '\n\nAdditional Question & Answer Context:\n';
+    qaContext.slice(0, 5).forEach((qa, index) => { // Max 5 Q&A pairs
+      const question = qa.question.length > 200 ? qa.question.substring(0, 200) + '...' : qa.question;
+      const answer = qa.answer.length > 500 ? qa.answer.substring(0, 500) + '...' : qa.answer;
+      qaContextText += `\nQ${index + 1} to ${qa.user === 'user_a' ? 'User A' : 'User B'}: ${question}\n`;
+      qaContextText += `A${index + 1}: ${answer}\n`;
+    });
+    
+    if (qaContextText.length > maxQALength) {
+      qaContextText = qaContextText.substring(0, maxQALength) + '... [truncated]';
+    }
+    qaContextText += '\n';
   }
 
   const prompt = `You are an impartial AI arbiter. Two parties have a dispute.
@@ -38,16 +73,16 @@ User A's perspective:
 ${userAEvidence}
 
 User B's perspective:
-${userBEvidence}
+${userBEvidence}${qaContextText}
 
-Analyze both arguments and return ONLY a valid JSON object with this exact structure:
+Analyze both arguments and any additional Q&A context above. Return ONLY a valid JSON object with this exact structure:
 {
   "analysis_user_a": "Detailed analysis of User A's strengths and weaknesses",
-  "analysis_user_b": "Detailed analysis of User B's strengths and weaknesses",
+  "analysis_user_b": "Detailed analysis of User B's strengths and weaknesses", 
   "winner": "User A" | "User B" | "Tie"
 }
 
-Base your analysis ONLY on the provided evidence. You MUST declare a winner. Be thorough in your analysis but concise. Return ONLY the JSON object, no other text.`;
+Base your analysis on ALL provided information including initial arguments and any Q&A exchanges. You MUST declare a winner. Be thorough in your analysis but concise. Return ONLY the JSON object, no other text.`;
 
   if (process.env.AI_MODEL && process.env.AI_MODEL !== AI_MODEL) {
     console.warn('Gemini model normalized:', process.env.AI_MODEL, '=>', AI_MODEL);
@@ -73,6 +108,13 @@ Base your analysis ONLY on the provided evidence. You MUST declare a winner. Be 
             console.warn(`Gemini 503 (high demand), retrying in ${delayMs}ms... (attempt ${attempt + 1}/${maxRetries})`);
             await new Promise((resolve) => setTimeout(resolve, delayMs));
             continue;
+          }
+
+          // 400 = bad request (usually prompt too long); don't retry
+          if (status === 400) {
+            console.error('Gemini 400 Bad Request - prompt likely too long or malformed');
+            console.error('Prompt length:', prompt.length);
+            console.error('Prompt preview:', prompt.substring(0, 500) + '...');
           }
 
           // For other errors or final retry, break out.

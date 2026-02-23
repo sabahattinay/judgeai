@@ -7,7 +7,7 @@ export interface VerdictJson {
 export interface DisputeRoom {
   id: string;
   created_at: string;
-  status: 'waiting' | 'ready' | 'judging' | 'completed';
+  status: 'waiting' | 'ready' | 'questioning' | 'answering' | 'judging' | 'completed';
   user_a_token: string;
   user_b_token: string;
   user_a_submitted: boolean;
@@ -15,6 +15,8 @@ export interface DisputeRoom {
   verdict_json: VerdictJson | null;
   engagement_score: number;
   title: string | null;
+  questioning_round: number;
+  max_questioning_rounds: number;
 }
 
 export interface Submission {

@@ -65,6 +65,15 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Fetch Q&A context if available
+      let qaContext: { question: string; answer: string; user: 'user_a' | 'user_b' }[] = [];
+      const questions = Array.from(mockQuestions.values()).filter(q => q.room_id === roomId && q.answered);
+      qaContext = questions.map(q => ({
+        question: q.question_text,
+        answer: q.answer_text!,
+        user: q.target_user === 'both' ? 'user_a' : q.target_user as 'user_a' | 'user_b',
+      }));
+
       // Generate verdict using Gemini or Mock AI based on configuration
       let verdict: VerdictJson;
       if (USE_MOCK_AI) {
@@ -72,7 +81,8 @@ export async function POST(request: NextRequest) {
         verdict = await generateMockVerdict(userAEvidence, userBEvidence);
       } else {
         console.log('Using Google Gemini AI service');
-        verdict = await generateGeminiVerdict(userAEvidence, userBEvidence);
+        console.log(`Including ${qaContext.length} Q&A pairs in context`);
+        verdict = await generateGeminiVerdict(userAEvidence, userBEvidence, qaContext);
       }
 
       room.verdict_json = verdict;
@@ -137,6 +147,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch Q&A context if available
+    const { data: questions } = await supabaseAdmin
+      .from('ai_questions')
+      .select('*')
+      .eq('room_id', roomId)
+      .eq('answered', true);
+
+    let qaContext: { question: string; answer: string; user: 'user_a' | 'user_b' }[] = [];
+    if (questions) {
+      qaContext = questions.map(q => ({
+        question: q.question_text,
+        answer: q.answer_text!,
+        user: q.target_user === 'both' ? 'user_a' : q.target_user as 'user_a' | 'user_b',
+      }));
+    }
+
     let verdict: VerdictJson;
 
     if (USE_MOCK_AI) {
@@ -146,7 +172,8 @@ export async function POST(request: NextRequest) {
     } else {
       // Use Google Gemini AI
       console.log('Using Google Gemini AI service');
-      verdict = await generateGeminiVerdict(userAEvidence, userBEvidence);
+      console.log(`Including ${qaContext.length} Q&A pairs in context`);
+      verdict = await generateGeminiVerdict(userAEvidence, userBEvidence, qaContext);
     }
 
     if (!verdict.analysis_user_a || !verdict.analysis_user_b || !verdict.winner) {

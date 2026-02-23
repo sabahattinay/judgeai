@@ -19,6 +19,15 @@ export default function VerdictPage() {
     user_a: { story: string; documents: Document[] } | null;
     user_b: { story: string; documents: Document[] } | null;
   }>({ user_a: null, user_b: null });
+  const [questions, setQuestions] = useState<{
+    id: string;
+    target_user: 'user_a' | 'user_b';
+    question_text: string;
+    question_type: 'clarification' | 'evidence_request' | 'timeline' | 'impact';
+    answer_text: string;
+    created_at: string;
+    answered_at: string;
+  }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -39,6 +48,7 @@ export default function VerdictPage() {
 
       setRoom(data.room);
       setSubmissions(data.submissions);
+      setQuestions(data.questions || []);
       setLoading(false);
     } catch (err) {
       console.error('Error loading verdict:', err);
@@ -113,6 +123,7 @@ export default function VerdictPage() {
             roomId={roomId}
             engagementScore={room?.engagement_score || 0}
             submissions={submissions}
+            questions={questions}
             showEngagement={false}
           />
         )}

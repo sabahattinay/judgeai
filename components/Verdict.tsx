@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WinnerBadge } from './WinnerBadge';
+import { QASection } from './QASection';
 import { Heart, Share2, Home } from 'lucide-react';
 import { VerdictJson } from '@/types/verdict';
 import { toast } from 'sonner';
@@ -17,10 +18,19 @@ interface VerdictProps {
     user_a: { story: string; documents: any[] } | null;
     user_b: { story: string; documents: any[] } | null;
   };
+  questions?: {
+    id: string;
+    target_user: 'user_a' | 'user_b';
+    question_text: string;
+    question_type: 'clarification' | 'evidence_request' | 'timeline' | 'impact';
+    answer_text: string;
+    created_at: string;
+    answered_at: string;
+  }[];
   showEngagement?: boolean;
 }
 
-export function Verdict({ verdict, roomId, engagementScore, submissions, showEngagement = true }: VerdictProps) {
+export function Verdict({ verdict, roomId, engagementScore, submissions, questions, showEngagement = true }: VerdictProps) {
   const [liked, setLiked] = useState(false);
   const [currentScore, setCurrentScore] = useState(engagementScore);
 
@@ -131,6 +141,9 @@ export function Verdict({ verdict, roomId, engagementScore, submissions, showEng
           </Card>
         </div>
       )}
+
+      {/* Questions & Answers Section */}
+      <QASection questions={questions || []} />
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
