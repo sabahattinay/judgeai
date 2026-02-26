@@ -125,3 +125,97 @@ CREATE POLICY "Anyone can engage"
 ALTER PUBLICATION supabase_realtime ADD TABLE dispute_rooms;
 ALTER PUBLICATION supabase_realtime ADD TABLE submissions;
 ALTER PUBLICATION supabase_realtime ADD TABLE documents;
+
+-- =============================================
+-- JURY SYSTEM TABLES
+-- =============================================
+
+-- Add jury_mode flag to dispute_rooms
+ALTER TABLE dispute_rooms ADD COLUMN IF NOT EXISTS is_jury_mode BOOLEAN DEFAULT FALSE;
+
+-- Add questioning fields to dispute_rooms
+ALTER TABLE dispute_rooms ADD COLUMN IF NOT EXISTS questioning_round INTEGER DEFAULT 0;
+ALTER TABLE dispute_rooms ADD COLUMN IF NOT EXISTS max_questioning_rounds INTEGER DEFAULT 2;
+
+-- Create enum for jury vote type
+CREATE TYPE jury_vote_type AS ENUM ('user_a', 'user_b', 'abstain');
+
+-- Create jury_members table
+CREATE TABLE jury_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID REFERENCES dispute_rooms(id) ON DELETE CASCADE,
+  member_index INTEGER NOT NULL CHECK (member_index >= 0 AND member_index < 12),
+  display_name VARCHAR(50) DEFAULT 'Juri Uyesi',
+  token UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+  vote jury_vote_type,
+  vote_reason TEXT,
+  has_voted BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(room_id, member_index)
+);
+
+-- Create jury_settings table
+CREATE TABLE jury_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID UNIQUE REFERENCES dispute_rooms(id) ON DELETE CASCADE,
+  consensus_required BOOLEAN DEFAULT TRUE,
+  consensus_threshold INTEGER DEFAULT 12 CHECK (consensus_threshold >= 1 AND consensus_threshold <= 12),
+  voting_deadline TIMESTAMP WITH TIME ZONE,
+  allow_revote BOOLEAN DEFAULT TRUE,
+  voting_visible BOOLEAN DEFAULT FALSE, -- If true, votes are visible during voting
+  anonymous_voting BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for jury members
+CREATE INDEX idx_jury_members_room_id ON jury_members(room_id);
+CREATE INDEX idx_jury_members_token ON jury_members(token);
+
+-- Enable RLS for jury tables
+ALTER TABLE jury_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE jury_settings ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for jury_members
+-- Allow public read for completed jury verdicts
+CREATE POLICY "Public read for completed jury members"
+  ON jury_members FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM dispute_rooms
+      WHERE dispute_rooms.id = jury_members.room_id
+      AND dispute_rooms.status = 'completed'
+    )
+  );
+
+-- Allow insert for room participants
+CREATE POLICY "Anyone can insert jury members"
+  ON jury_members FOR INSERT
+  WITH CHECK (true);
+
+-- Allow update for own vote
+CREATE POLICY "Update own jury vote"
+  ON jury_members FOR UPDATE
+  USING (true);
+
+-- RLS Policies for jury_settings
+CREATE POLICY "Public read for jury settings"
+  ON jury_settings FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM dispute_rooms
+      WHERE dispute_rooms.id = jury_settings.room_id
+      AND dispute_rooms.status = 'completed'
+    )
+  );
+
+CREATE POLICY "Anyone can insert jury settings"
+  ON jury_settings FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Update jury settings"
+  ON jury_settings FOR UPDATE
+  USING (true);
+
+-- Enable real-time for jury tables
+ALTER PUBLICATION supabase_realtime ADD TABLE jury_members;
+ALTER PUBLICATION supabase_realtime ADD TABLE jury_settings;

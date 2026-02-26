@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { mockRooms, mockSubmissions, mockDocuments, mockFiles, generateId } from '@/lib/mock-supabase';
+import { createClient } from '@/lib/supabase/server';
 
 const USE_MOCK_DB = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co';
 
@@ -14,6 +15,14 @@ export async function POST(request: NextRequest) {
 
     if (!roomId || !token || !story) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Get current user if authenticated
+    let userId = null;
+    if (!USE_MOCK_DB) {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
     }
 
     if (USE_MOCK_DB) {
@@ -39,6 +48,7 @@ export async function POST(request: NextRequest) {
 
       if (submission) {
         submission.story = story;
+        submission.user_id = userId;
       } else {
         const submissionId = generateId();
         submission = {
@@ -47,6 +57,7 @@ export async function POST(request: NextRequest) {
           user_type: userType,
           story,
           created_at: new Date().toISOString(),
+          user_id: userId,
         };
         mockSubmissions.set(submissionId, submission);
       }
@@ -114,7 +125,7 @@ export async function POST(request: NextRequest) {
     if (existingSubmission) {
       const { data: updatedSubmission, error: updateError } = await supabaseAdmin
         .from('submissions')
-        .update({ story })
+        .update({ story, user_id: userId })
         .eq('id', existingSubmission.id)
         .select()
         .single();
@@ -130,6 +141,7 @@ export async function POST(request: NextRequest) {
           room_id: roomId,
           user_type: userType,
           story,
+          user_id: userId,
         })
         .select()
         .single();

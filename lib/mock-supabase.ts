@@ -13,6 +13,7 @@ interface MockRoom {
   title: string | null;
   questioning_round: number;
   max_questioning_rounds: number;
+  user_id: string | null;
 }
 
 interface MockSubmission {
@@ -21,6 +22,7 @@ interface MockSubmission {
   user_type: 'user_a' | 'user_b';
   story: string;
   created_at: string;
+  user_id: string | null;
 }
 
 interface MockDocument {
@@ -85,7 +87,8 @@ const demoRoom: MockRoom = {
   questioning_round: 0,
   max_questioning_rounds: 2,
   engagement_score: 42,
-  title: "Who should pay for the broken window?"
+  title: "Who should pay for the broken window?",
+  user_id: null
 };
 
 export function initializeMockData() {

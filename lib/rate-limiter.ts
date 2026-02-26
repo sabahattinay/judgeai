@@ -5,8 +5,13 @@ interface RateLimitEntry {
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
-const MAX_REQUESTS = 1000; // Increased for testing
+// 1 hour window in milliseconds (configurable via env, defaults to 1 hour)
+const RATE_LIMIT_WINDOW =
+  parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 60 * 60 * 1000;
+
+// Maximum number of requests per window (default: 3, as documented)
+const MAX_REQUESTS =
+  parseInt(process.env.MAX_ROOMS_PER_WINDOW || '', 10) || 3;
 
 export function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();

@@ -2,6 +2,35 @@ export interface VerdictJson {
   analysis_user_a: string;
   analysis_user_b: string;
   winner: 'User A' | 'User B' | 'Tie';
+  // Jury system fields
+  is_jury_verdict?: boolean;
+  jury_votes?: JuryVote[];
+  consensus_reached?: boolean;
+  vote_counts?: {
+    user_a: number;
+    user_b: number;
+    abstain: number;
+  };
+}
+
+export interface JuryVote {
+  member_index: number;
+  display_name: string;
+  vote: 'user_a' | 'user_b' | 'abstain';
+  reason?: string;
+}
+
+export interface JuryVerdict {
+  consensus_reached: boolean;
+  winner: 'User A' | 'User B' | 'Tie' | 'No Consensus';
+  vote_counts: {
+    user_a: number;
+    user_b: number;
+    abstain: number;
+  };
+  jury_votes: JuryVote[];
+  consensus_percentage: number;
+  total_members: number;
 }
 
 export interface DisputeRoom {
@@ -17,6 +46,8 @@ export interface DisputeRoom {
   title: string | null;
   questioning_round: number;
   max_questioning_rounds: number;
+  // Jury system fields
+  is_jury_mode: boolean;
 }
 
 export interface Submission {

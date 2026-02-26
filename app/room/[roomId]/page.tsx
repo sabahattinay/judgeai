@@ -8,10 +8,11 @@ import { SubmissionForm } from '@/components/SubmissionForm';
 import { LiveSubmissionView } from '@/components/LiveSubmissionView';
 import { Verdict } from '@/components/Verdict';
 import { QuestionPanel } from '@/components/QuestionPanel';
+import { JuryVotingPanel } from '@/components/JuryVotingPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Gavel } from 'lucide-react';
+import { Loader2, AlertCircle, Gavel, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RoomPage() {
@@ -19,9 +20,11 @@ export default function RoomPage() {
   const searchParams = useSearchParams();
   const roomId = params.roomId as string;
   const token = searchParams.get('token');
+  const juryToken = searchParams.get('juryToken');
 
   const [room, setRoom] = useState<DisputeRoom | null>(null);
-  const [userType, setUserType] = useState<'user_a' | 'user_b' | null>(null);
+  const [userType, setUserType] = useState<'user_a' | 'user_b' | 'jury' | null>(null);
+  const [juryTokenLocal, setJuryTokenLocal] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<{
     user_a: Submission | null;
     user_b: Submission | null;
@@ -42,6 +45,13 @@ export default function RoomPage() {
       return;
     }
 
+    // Check if this is a jury member
+    if (juryToken) {
+      setJuryTokenLocal(juryToken);
+      loadRoomData();
+      return;
+    }
+
     if (!token) {
       setError('Missing access token. Please use the complete link provided when creating the room.');
       setLoading(false);
@@ -52,7 +62,7 @@ export default function RoomPage() {
     const cleanup = subscribeToUpdates();
     
     return cleanup;
-  }, [roomId, token]);
+  }, [roomId, token, juryToken]);
 
   const loadRoomData = async () => {
     try {
@@ -223,52 +233,79 @@ export default function RoomPage() {
             <QuestionPanel
               roomId={roomId}
               token={token!}
-              userType={userType}
+              userType={userType as 'user_a' | 'user_b'}
               onAllQuestionsAnswered={() => {
                 // Questions answered, ready for judgment
                 loadRoomData();
               }}
             />
 
-            {/* Judgment Request */}
-            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
-              <CardContent className="py-8 text-center">
-                <Gavel className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-                <h3 className="text-2xl font-bold mb-2">Ready for Judgment</h3>
-                <p className="text-gray-600 mb-6">
-                  Both parties have submitted their arguments. Click below to request AI judgment.
-                </p>
-                <div className="flex gap-4 justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowQuestions(!showQuestions)}
-                    className="gap-2"
-                  >
-                    <Gavel className="w-5 h-5" />
-                    {showQuestions ? 'Hide' : 'Show'} Questions
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={requestJudgment}
-                    disabled={judging}
-                    className="gap-2"
-                  >
-                    {judging ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Requesting Judgment...
-                      </>
-                    ) : (
-                      <>
-                        <Gavel className="w-5 h-5" />
-                        Request AI Judgment
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Judgment Request - only for regular users, not jury */}
+            {userType !== 'jury' && (
+              <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
+                <CardContent className="py-8 text-center">
+                  <Gavel className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+                  <h3 className="text-2xl font-bold mb-2">Ready for Judgment</h3>
+                  <p className="text-gray-600 mb-6">
+                    Both parties have submitted their arguments. Click below to request AI judgment.
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowQuestions(!showQuestions)}
+                      className="gap-2"
+                    >
+                      <Gavel className="w-5 h-5" />
+                      {showQuestions ? 'Hide' : 'Show'} Questions
+                    </Button>
+                    <Button
+                      size="lg"
+                      onClick={requestJudgment}
+                      disabled={judging}
+                      className="gap-2"
+                    >
+                      {judging ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Requesting Judgment...
+                        </>
+                      ) : (
+                        <>
+                          <Gavel className="w-5 h-5" />
+                          Request AI Judgment
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </>
+        )}
+
+        {/* Jury Voting Panel - show when jury mode is active */}
+        {room.is_jury_mode && bothSubmitted && (
+          <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 mt-6">
+            <CardContent className="py-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-6 h-6 text-amber-600" />
+                <h3 className="text-xl font-bold">Juri Oylamasi</h3>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Her iki taraf da argumanlarini sundu. Simdi sira sizde - oy kullanin.
+              </p>
+              {juryTokenLocal && (
+                <JuryVotingPanel
+                  roomId={roomId}
+                  token={juryTokenLocal}
+                  settings={null}
+                  onVoteSubmitted={() => {
+                    toast.success('Oy tamamlandi!');
+                  }}
+                />
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

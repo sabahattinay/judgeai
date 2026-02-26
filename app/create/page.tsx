@@ -7,17 +7,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Copy, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { JuryModeToggle } from '@/components/JuryModeToggle';
+
+interface RoomData {
+  userALink: string;
+  userBLink: string;
+  isJuryMode?: boolean;
+  juryMembers?: { index: number; token: string; link: string }[];
+}
 
 export default function CreatePage() {
   const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [roomData, setRoomData] = useState<{
-    userALink: string;
-    userBLink: string;
-  } | null>(null);
+  const [juryMode, setJuryMode] = useState(false);
+  const [jurySettings, setJurySettings] = useState({
+    consensusRequired: true,
+    consensusThreshold: 12,
+    allowRevote: true,
+    anonymousVoting: true,
+  });
+  const [roomData, setRoomData] = useState<RoomData | null>(null);
   const [copiedA, setCopiedA] = useState(false);
   const [copiedB, setCopiedB] = useState(false);
+  const [copiedJury, setCopiedJury] = useState<number | null>(null);
 
   const createRoom = async () => {
     setLoading(true);
@@ -27,7 +40,11 @@ export default function CreatePage() {
       const response = await fetch('/api/create-room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim() || null }),
+        body: JSON.stringify({ 
+          title: title.trim() || null,
+          isJuryMode: juryMode,
+          jurySettings: juryMode ? jurySettings : undefined,
+        }),
       });
 
       const data = await response.json();
@@ -44,6 +61,8 @@ export default function CreatePage() {
       setRoomData({
         userALink: data.userALink,
         userBLink: data.userBLink,
+        isJuryMode: data.isJuryMode,
+        juryMembers: data.juryMembers,
       });
       toast.success('Dispute room created successfully!');
     } catch (err) {
@@ -54,17 +73,22 @@ export default function CreatePage() {
     }
   };
 
-  const copyToClipboard = async (text: string, user: 'A' | 'B') => {
+  const copyToClipboard = async (text: string, user: 'A' | 'B' | number) => {
     try {
       await navigator.clipboard.writeText(text);
-      if (user === 'A') {
+      if (typeof user === 'number') {
+        setCopiedJury(user);
+        setTimeout(() => setCopiedJury(null), 2000);
+        toast.success(`Jury member #${user + 1} link copied!`);
+      } else if (user === 'A') {
         setCopiedA(true);
         setTimeout(() => setCopiedA(false), 2000);
+        toast.success(`User ${user} link copied!`);
       } else {
         setCopiedB(true);
         setTimeout(() => setCopiedB(false), 2000);
+        toast.success(`User ${user} link copied!`);
       }
-      toast.success(`User ${user} link copied!`);
     } catch (err) {
       toast.error('Failed to copy link');
     }
@@ -76,12 +100,17 @@ export default function CreatePage() {
         <div className="container mx-auto px-4 max-w-3xl">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Dispute Room Created!</CardTitle>
+              <CardTitle className="text-2xl">
+                {roomData.isJuryMode ? 'Juri Dispute Room Created!' : 'Dispute Room Created!'}
+              </CardTitle>
               <CardDescription>
-                Share these unique links with each party. Each link is secure and can only be used by one person.
+                {roomData.isJuryMode 
+                  ? 'Share the user links with both parties and the jury links with 12 jury members.'
+                  : 'Share these unique links with each party. Each link is secure and can only be used by one person.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* User Links */}
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-blue-600">User A Link</label>
                 <div className="flex gap-2">
@@ -132,6 +161,41 @@ export default function CreatePage() {
                 </Button>
               </div>
 
+              {/* Jury Links */}
+              {roomData.isJuryMode && roomData.juryMembers && (
+                <div className="space-y-3 pt-4 border-t">
+                  <label className="text-sm font-semibold text-amber-600">
+                    Jury Member Links (12 members)
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Share these links with 12 jury members who will vote on the dispute.
+                  </p>
+                  
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                    {roomData.juryMembers.map((member) => (
+                      <div key={member.index} className="flex gap-2">
+                        <Input
+                          value={member.link}
+                          readOnly
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copyToClipboard(member.link, member.index)}
+                        >
+                          {copiedJury === member.index ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <Alert>
                 <AlertDescription>
                   <strong>Important:</strong> Use the buttons above to open rooms, or copy the COMPLETE link including the token. Anyone with a link can submit arguments for that user.
@@ -181,6 +245,14 @@ export default function CreatePage() {
                 This will be visible on the public feed after resolution
               </p>
             </div>
+
+            {/* Jury Mode Toggle */}
+            <JuryModeToggle
+              enabled={juryMode}
+              onEnabledChange={setJuryMode}
+              settings={jurySettings}
+              onSettingsChange={setJurySettings}
+            />
 
             {error && (
               <Alert variant="destructive">

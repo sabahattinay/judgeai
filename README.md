@@ -17,7 +17,7 @@ A Next.js web application where two users can resolve disputes using an AI arbit
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14+, React, TypeScript, Tailwind CSS, shadcn/ui
+- **Frontend:** Next.js 16.1+, React 19, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend & Database:** Supabase (PostgreSQL + Real-time + Storage)
 - **AI:** OpenAI API (configurable for self-hosted LLMs)
 - **State Management:** React hooks + Supabase real-time subscriptions

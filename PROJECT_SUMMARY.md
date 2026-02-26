@@ -7,7 +7,7 @@ All features from the plan have been successfully implemented.
 ## What Was Built
 
 ### Core Infrastructure
-- ✅ Next.js 14+ with TypeScript, Tailwind CSS, and App Router
+- ✅ Next.js 16.1+ with TypeScript, Tailwind CSS, and App Router
 - ✅ shadcn/ui component library integrated
 - ✅ Supabase client and admin setup with fallback values for builds
 - ✅ Configurable AI service (OpenAI SDK with custom baseURL)
@@ -202,8 +202,8 @@ npm run dev
 
 ## Technologies Used
 
-- Next.js 14.2+
-- React 18+
+- Next.js 16.1+
+- React 19+
 - TypeScript
 - Tailwind CSS
 - shadcn/ui
